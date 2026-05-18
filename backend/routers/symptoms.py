@@ -50,6 +50,18 @@ class QueryHistoryItem(BaseModel):
     conditions_count: int
 
 
+class QueryHistoryDetailResponse(BaseModel):
+    """Response model for detailed query history with conditions."""
+
+    id: str
+    created_at: str
+    symptom_text: str
+    is_emergency: bool
+    matched_keyword: Optional[str] = None
+    conditions_count: int
+    conditions: List[dict]
+
+
 router = APIRouter(prefix="/api")
 
 
@@ -201,16 +213,16 @@ async def get_history(limit: int = 10) -> List[QueryHistoryItem]:
     ]
 
 
-@router.get("/history/{query_id}", response_model=QueryHistoryItem)
-async def get_query_detail(query_id: str) -> QueryHistoryItem:
+@router.get("/history/{query_id}", response_model=QueryHistoryDetailResponse)
+async def get_query_detail(query_id: str) -> QueryHistoryDetailResponse:
     """
-    Get details of a specific query by ID.
+    Get details of a specific query by ID, including logged conditions.
 
     Args:
         query_id: The UUID of the query to fetch.
 
     Returns:
-        The query details.
+        The query details with matched conditions.
 
     Raises:
         HTTPException: 404 if query not found.
@@ -223,11 +235,24 @@ async def get_query_detail(query_id: str) -> QueryHistoryItem:
             detail=f"Query with ID '{query_id}' not found.",
         )
 
-    return QueryHistoryItem(
+    raw = query.get("raw_response", {})
+    conditions = []
+    if isinstance(raw, dict):
+        conditions = raw.get("conditions", [])
+    elif isinstance(raw, str):
+        import json
+        try:
+            parsed = json.loads(raw)
+            conditions = parsed.get("conditions", [])
+        except Exception:
+            pass
+
+    return QueryHistoryDetailResponse(
         id=query.get("id", ""),
         created_at=str(query.get("created_at", "")),
         symptom_text=query.get("symptom_text", ""),
         is_emergency=query.get("is_emergency", False),
         matched_keyword=query.get("matched_keyword"),
         conditions_count=query.get("conditions_count", 0),
+        conditions=conditions,
     )
