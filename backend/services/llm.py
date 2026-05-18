@@ -1,23 +1,23 @@
 """
 LLM integration module for the Medical Symptom Information Assistant.
 
-This module handles calling the Claude API with the retrieved medical context
+This module handles calling the Google Gemini API with the retrieved medical context
 to generate symptom information responses.
 
 Usage:
     from backend.services.llm import call_llm, build_disclaimer
-    
+
     conditions = call_llm("I have a severe headache", chunks)
     disclaimer = build_disclaimer()
 """
 
 import json
+import re
 from typing import Dict, List
 
-import anthropic
-from anthropic import Anthropic
+import google.generativeai as genai
 
-from backend.config import CLAUDE_API_KEY, CLAUDE_MODEL
+from backend.config import GOOGLE_API_KEY, GEMINI_MODEL
 from backend.services.retrieval import format_chunks_for_prompt
 
 
@@ -39,16 +39,48 @@ Respond ONLY in valid JSON matching this schema:
 {{"conditions": [{{"name": str, "explanation": str, "severity": "mild"|"moderate"|"urgent", "source": str}}]}}
 
 CONTEXT:
-{{retrieved_chunks}}
+{retrieved_chunks}
 
 USER SYMPTOMS:
-{{user_input}}"""
+{user_input}"""
+
+_generative_model = None
+
+
+def _get_model():
+    """
+    Load and return the Gemini model, configuring the API once at module level.
+
+    Returns:
+        The configured GenerativeModel instance.
+
+    Raises:
+        RuntimeError: If the API key is not configured or model initialization fails.
+    """
+    global _generative_model
+    if _generative_model is not None:
+        return _generative_model
+
+    try:
+        if not GOOGLE_API_KEY:
+            raise RuntimeError("Google API key not configured. Set GOOGLE_API_KEY in .env")
+        genai.configure(api_key=GOOGLE_API_KEY)
+        _generative_model = genai.GenerativeModel(
+            model_name=GEMINI_MODEL,
+            generation_config={
+                "temperature": 0.2,
+                "max_output_tokens": 1500,
+            },
+        )
+        return _generative_model
+    except Exception as e:
+        raise RuntimeError(f"Failed to initialize Gemini model: {str(e)}") from e
 
 
 def build_disclaimer() -> str:
     """
     Return the standard medical disclaimer for user-facing messages.
-    
+
     Returns:
         The exact disclaimer string warning users to consult healthcare professionals.
     """
@@ -60,70 +92,172 @@ def build_disclaimer() -> str:
 
 def call_llm(user_input: str, chunks: List[Dict[str, str | float]]) -> List[Dict[str, str]]:
     """
-    Call the Claude API with the user's symptoms and retrieved context.
-    
+    Call the Google Gemini API with the user's symptoms and retrieved context.
+
     This function builds a prompt using the exact template from CLAUDE.md,
-    sends it to Claude, and parses the JSON response into condition dictionaries.
-    
+    sends it to Gemini, and parses the JSON response into condition dictionaries.
+
     Args:
         user_input: The original user symptom description.
         chunks: List of retrieved document chunks from the retrieval service.
-        
+
     Returns:
         List of condition dicts with keys: name, explanation, severity, source.
         On any error, returns a single condition dict with name "Parse Error"
         containing the raw model output or error message.
     """
-    if not user_input or not user_input.strip():
-        return [{"name": "Parse Error", "explanation": "No user input provided.", "severity": "moderate", "source": "system"}]
-    
-    if not chunks:
-        return [{"name": "Parse Error", "explanation": "No relevant medical information found.", "severity": "moderate", "source": "system"}]
-    
     try:
-        if not CLAUDE_API_KEY:
-            return [{"name": "Parse Error", "explanation": "Claude API key not configured.", "severity": "moderate", "source": "system"}]
-    except Exception:
-        return [{"name": "Parse Error", "explanation": "Claude API key not configured.", "severity": "moderate", "source": "system"}]
-    
+        if not user_input or not user_input.strip():
+            return [
+                {
+                    "name": "Parse Error",
+                    "explanation": "No user input provided.",
+                    "severity": "moderate",
+                    "source": "system",
+                }
+            ]
+    except Exception as e:
+        return [
+            {
+                "name": "Parse Error",
+                "explanation": f"Input validation failed: {str(e)}",
+                "severity": "moderate",
+                "source": "system",
+            }
+        ]
+
+    try:
+        if not chunks:
+            return [
+                {
+                    "name": "Parse Error",
+                    "explanation": "No relevant medical information found.",
+                    "severity": "moderate",
+                    "source": "system",
+                }
+            ]
+    except Exception as e:
+        return [
+            {
+                "name": "Parse Error",
+                "explanation": f"Chunk validation failed: {str(e)}",
+                "severity": "moderate",
+                "source": "system",
+            }
+        ]
+
     try:
         formatted_chunks = format_chunks_for_prompt(chunks)
-        
+    except Exception as e:
+        return [
+            {
+                "name": "Parse Error",
+                "explanation": f"Failed to format chunks: {str(e)}",
+                "severity": "moderate",
+                "source": "system",
+            }
+        ]
+
+    try:
         prompt = SYSTEM_PROMPT_TEMPLATE.format(
             retrieved_chunks=formatted_chunks,
             user_input=user_input.strip(),
         )
-        
-        client = Anthropic(api_key=CLAUDE_API_KEY)
-        
-        response = client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=1500,
-            system=prompt,
-            messages=[{"role": "user", "content": "Generate the response."}],
-        )
-        
-        response_text = response.content[0].text.strip()
-        
-        json_match = response_text.find("{")
-        if json_match != -1:
-            json_str = response_text[json_match:]
-            last_brace = json_str.rfind("}")
-            if last_brace != -1:
-                json_str = json_str[:last_brace + 1]
-            
-            parsed = json.loads(json_str)
-            conditions = parsed.get("conditions", [])
-            if conditions and isinstance(conditions, list):
-                return conditions
-        
-        return [{"name": "Parse Error", "explanation": response_text, "severity": "moderate", "source": "system"}]
-    
-    except anthropic.APIConnectionError:
-        return [{"name": "Parse Error", "explanation": "Failed to connect to Claude API. Please check your internet connection.", "severity": "moderate", "source": "system"}]
-    except anthropic.RateLimitError:
-        return [{"name": "Parse Error", "explanation": "Rate limit exceeded. Please try again later.", "severity": "moderate", "source": "system"}]
-    except json.JSONDecodeError as e:
-        return [{"name": "Parse Error", "explanation": f"Failed to parse JSON response: {str(e)}", "severity": "moderate", "source": "system"}]
     except Exception as e:
-        return [{"name": "Parse Error", "explanation": f"LLM call failed: {str(e)}", "severity": "moderate", "source": "system"}]
+        return [
+            {
+                "name": "Parse Error",
+                "explanation": f"Failed to build prompt: {str(e)}",
+                "severity": "moderate",
+                "source": "system",
+            }
+        ]
+
+    try:
+        model = _get_model()
+    except Exception as e:
+        return [
+            {
+                "name": "Parse Error",
+                "explanation": f"Model initialization failed: {str(e)}",
+                "severity": "moderate",
+                "source": "system",
+            }
+        ]
+
+    try:
+        response = model.generate_content(prompt)
+        raw_text = response.text.strip()
+    except Exception as e:
+        return [
+            {
+                "name": "Parse Error",
+                "explanation": f"Gemini API call failed: {str(e)}",
+                "severity": "moderate",
+                "source": "system",
+            }
+        ]
+
+    try:
+        cleaned_text = _strip_markdown_fences(raw_text)
+        parsed = json.loads(cleaned_text)
+        conditions = parsed.get("conditions", [])
+        if conditions and isinstance(conditions, list):
+            validated_conditions = []
+            for cond in conditions:
+                if isinstance(cond, dict) and "name" in cond:
+                    validated_conditions.append(
+                        {
+                            "name": str(cond.get("name", "")),
+                            "explanation": str(cond.get("explanation", "")),
+                            "severity": str(cond.get("severity", "moderate")),
+                            "source": str(cond.get("source", "unknown")),
+                        }
+                    )
+            if validated_conditions:
+                return validated_conditions
+        return [
+            {
+                "name": "Parse Error",
+                "explanation": raw_text[:500] if raw_text else "Empty response from model",
+                "severity": "moderate",
+                "source": "system",
+            }
+        ]
+    except json.JSONDecodeError as e:
+        return [
+            {
+                "name": "Parse Error",
+                "explanation": f"Failed to parse JSON response: {str(e)}. Raw: {raw_text[:500]}",
+                "severity": "moderate",
+                "source": "system",
+            }
+        ]
+    except Exception as e:
+        return [
+            {
+                "name": "Parse Error",
+                "explanation": f"Unexpected error parsing response: {str(e)}",
+                "severity": "moderate",
+                "source": "system",
+            }
+        ]
+
+
+def _strip_markdown_fences(text: str) -> str:
+    """
+    Strip markdown code fences from text.
+
+    Removes ```json, ``` and similar fences from the beginning and end of text.
+
+    Args:
+        text: The raw text that may contain markdown fences.
+
+    Returns:
+        The text with markdown fences removed.
+    """
+    text = text.strip()
+    text = re.sub(r"^```json\s*", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"^```\s*", "", text)
+    text = re.sub(r"\s*```$", "", text)
+    return text.strip()

@@ -14,7 +14,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from backend.config import CHROMA_DB_PATH, CLAUDE_API_KEY, FRONTEND_URL
+from backend.config import FRONTEND_URL, SUPABASE_KEY, SUPABASE_URL
 from backend.routers.symptoms import router as symptoms_router
 
 logging.basicConfig(level=logging.INFO)
@@ -33,10 +33,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL],
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(symptoms_router)
@@ -45,17 +45,29 @@ app.include_router(symptoms_router)
 @app.on_event("startup")
 async def startup_event():
     """Log application startup information."""
-    api_key_status = "set" if CLAUDE_API_KEY else "not set"
     logger.info("MedAssist API started")
-    logger.info("ChromaDB path: %s", CHROMA_DB_PATH)
-    logger.info("Anthropic API key: %s", api_key_status)
+
+    if SUPABASE_URL and SUPABASE_KEY:
+        logger.info("Supabase connected: %s", SUPABASE_URL)
+
+        from backend.services.knowledge import get_knowledge_count, seed_knowledge_base, MEDICAL_DOCUMENTS
+
+        count = get_knowledge_count()
+        logger.info("Knowledge base count: %d", count)
+
+        if count == 0:
+            logger.info("Seeding knowledge base...")
+            seeded = seed_knowledge_base(MEDICAL_DOCUMENTS)
+            logger.info("Seeded %d knowledge chunks", seeded)
+    else:
+        logger.warning("Supabase not configured - query logging disabled")
 
 
 @app.get("/health")
 async def health_check() -> Dict[str, str]:
     """
     Health check endpoint.
-    
+
     Returns:
         Dict with status and version information.
     """
