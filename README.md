@@ -1,310 +1,151 @@
-# Medical Symptom Information Assistant
+# 🏥 MedAssist AI — Clinical Symptom Analysis Portal
 
-A RAG-based web application that helps users understand their symptoms using verified medical reference documents. Users describe symptoms in plain language and receive structured, sourced, responsible health information.
+MedAssist AI is a **state-of-the-art clinical symptom retrieval-augmented generation (RAG) portal**. It provides high-fidelity, evidence-grounded medical symptom evaluations by cross-referencing real-time user symptom inputs with verified healthcare reference guides from institutions like the WHO and NHS.
 
-## Project Overview
+Featuring a **premium clinical interface** built with Outfit & Inter typography, glowing glassmorphic elements, a simulated live ECG scanner loading wave, soft-triage severity badges, and interactive case dossier slide-overs.
 
-This application provides medical symptom information by:
-1. Detecting emergency keywords before processing
-2. Extracting medical entities using scispacy NER
-3. Retrieving relevant medical context from a ChromaDB vector store
-4. Generating responses using Claude API with grounded medical facts
+🔗 **Live Production App**: [https://medical-symptom-information-assista.vercel.app](https://medical-symptom-information-assista.vercel.app)
 
-## Tech Stack
+---
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | React + Vite + TailwindCSS |
-| Backend API | FastAPI (Python) |
-| NER | scispacy (en_core_sci_sm) |
-| Embeddings | sentence-transformers (all-MiniLM-L6-v2) |
-| Vector Store | ChromaDB |
-| LLM | Claude API (claude-sonnet-4-20250514) |
+## 🎨 Premium Visual & Architectural Features
 
-## Prerequisites
+### 1. Clinical Dashboard Design
+*   **Outfit & Inter Typography**: Set up clear, premium, hospital-grade typographic grids.
+*   **Heartbeat AI Brandmark**: An active neon-teal pulsating header navigation logo.
+*   **ECG Waveform Scanner**: Replaced generic loading spinners with a dark-slate **ECG wave simulation grid** featuring a moving scanning laser dot, active green pulse, and real-time clinical RAG status logs.
 
-- Python 3.11+
-- Node.js 20+
-- Docker 24+ and Docker Compose v2
-- Claude API key from Anthropic
+### 2. Interactive Clinical Triage
+*   **Dynamic Severity Accentuation**: Matched condition cards include left-accented colored sidebar indicators (Crimson for *urgent*, Amber for *moderate*, Emerald for *mild*).
+*   **Interactive Triage Badges**: Soft-gradient status pills featuring safety symbols (warning shields or alert pings) indicating emergency statuses.
+*   **Verified Medical Citations**: High-trust pills linking and referencing the exact clinical reference guides used (e.g. *WHO Headache Fact Sheet*).
 
-## Installation
+### 3. Patient Case Dossiers
+*   Clicking **"View Dossier"** inside the query log slides in a gorgeous medical dossier sheet overlay. This detail panel features evaluation hashes, timestamps, transcripts, full emergency explanation callouts, and structured condition lists.
 
-### Backend
+### 4. Interactive Quick-Start Symptoms
+*   Features quick symptom shortcuts (e.g., *Migraine*, *Fever & Dry Cough*, *Itchy Rash*, *Vertigo / Dizziness*) that users can click to pre-fill the symptom description field instantly.
 
-```bash
-pip install -r backend/requirements.txt
-python -m spacy download en_core_sci_sm
+---
+
+## 🛠️ Unified Full-Stack Architecture
+
+```
+               ┌────────────────────────────────────────────────────────┐
+               │                Vite React SPA Frontend                 │
+               └──────────────────────────┬─────────────────────────────┘
+                                          │  REST Requests
+                                          ▼
+               ┌────────────────────────────────────────────────────────┐
+               │                FastAPI (Python) Backend                │
+               └──────────────────────────┬─────────────────────────────┘
+                                          │
+                  ┌───────────────────────┴───────────────────────┐
+                  ▼                                               ▼
+┌───────────────────────────────────┐           ┌───────────────────────────────────┐
+│       Supabase (PostgreSQL)       │           │        Groq Cloud API             │
+│   Evidence Vector Knowledge Base  │           │    Llama-3.3-70B-Versatile LLM    │
+└───────────────────────────────────┘           └───────────────────────────────────┘
 ```
 
-### Frontend
+### Modern Cloud Stack
+*   **Frontend**: React (Vite) styled with harmonious custom clinical CSS palettes, glowing glassmorphism, and responsive Tailwind UI utilities.
+*   **Backend API**: High-performance FastAPI Python app featuring asynchronous query routers and rate limiters.
+*   **Database & Search**: Supabase PostgreSQL indexing and querying verified clinical guides.
+*   **Large Language Model**: Groq Llama-3.3-70B Cloud API for grounded, evidence-driven symptom assessments.
 
+---
+
+## 🚀 Step-by-Step Vercel Deployment
+
+We bypassed Vercel's strict **50MB size limit** for serverless runtimes by decoupling local offline ML components. In production, MedAssist runs an **extremely fast 15MB cloud pipeline**.
+
+### 1. Unified Routing Configuration (`vercel.json`)
+The [vercel.json](vercel.json) at the root level orchestrates both environments:
+```json
+{
+  "version": 2,
+  "builds": [
+    { "src": "api/index.py", "use": "@vercel/python" },
+    { "src": "frontend/package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "api/index.py" },
+    { "src": "/assets/(.*)", "dest": "frontend/assets/$1" },
+    { "src": "/(.*)", "dest": "frontend/$1", "continue": true }
+  ]
+}
+```
+
+### 2. Live Cloud Environment Variables
+In your Vercel Dashboard, go to **Settings ➡️ Environment Variables** and add:
+*   `GROQ_API_KEY`: `gsk_VSHea...`
+*   `GROQ_MODEL`: `llama-3.3-70b-versatile`
+*   `SUPABASE_URL`: `https://dpqyzzx...supabase.co`
+*   `SUPABASE_KEY`: `eyJhbGciOi...`
+
+### 3. Deploy
+Trigger the deployment directly:
+```bash
+npx vercel --prod
+```
+
+---
+
+## 💻 Local Installation & Setup
+
+### Prerequisites
+*   **Node.js** v20+
+*   **Python** 3.11+
+*   **Git**
+
+### 1. Clone & Configure Environment
+```bash
+git clone https://github.com/MoeenUddin01/Medical-Symptom-Information-Assistant.git
+cd Medical-Symptom-Information-Assistant
+```
+
+Create a `.env` file in the root folder:
+```env
+SUPABASE_URL=https://dpqyzzxjkjhjolpdbdbzbx.supabase.co
+SUPABASE_KEY=your_supabase_anon_key
+GROQ_API_KEY=gsk_your_groq_api_key
+GROQ_MODEL=llama-3.3-70b-versatile
+```
+
+### 2. Start the Backend API
+```bash
+# Set up a python virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install backend dependencies
+pip install -r backend/requirements.txt
+
+# Start the uvicorn API server
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+```
+The FastAPI backend will spin up at **`http://localhost:8000`**.
+
+### 3. Start the Frontend
 ```bash
 cd frontend
 npm install
-```
-
-## Environment Variables
-
-Create a `.env` file in the project root:
-
-```env
-# ChromaDB
-CHROMA_DB_PATH=./chroma_db
-CHROMA_COLLECTION_NAME=medical_symptoms
-
-# Frontend
-FRONTEND_URL=http://localhost:5173
-
-# Embedding Model
-EMBEDDING_MODEL=all-MiniLM-L6-v2
-
-# Claude API
-CLAUDE_API_KEY=your_anthropic_api_key_here
-CLAUDE_MODEL=claude-sonnet-4-20250514
-```
-
-## Running the Application
-
-### 1. Ingest Medical Knowledge Base
-
-Before running the app, populate the vector store with medical documents:
-
-```bash
-python -m backend.ingestion.ingest
-```
-
-This builds the knowledge base for 6 topics: headache, fever, cough, rash, nausea, dizziness.
-
-### 2. Start Backend
-
-```bash
-python backend/main.py
-```
-
-Or with uvicorn directly:
-
-```bash
-uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-### 3. Start Frontend
-
-```bash
-cd frontend
 npm run dev
 ```
+The clinical portal will launch locally at **`http://localhost:5173`**.
 
-## API Endpoints
+---
 
-### GET /health
+## 🔒 Security & Medical Advisory
 
-Health check endpoint (no rate limit).
+*   **REST API Rate Limiting**: The `/api/symptoms` endpoint is secured with a 20 request/minute IP rate limiter via SlowAPI to prevent scraping and abuse.
+*   **Interactive Safeguards**: High-contrast, floating emergency alert notices and sticky disclaimers are placed throughout the UI to ensure responsible product deployment.
 
-**Response:**
-```json
-{
-  "status": "ok",
-  "version": "1.0.0"
-}
-```
+> [!IMPORTANT]
+> **Medical Disclaimer**: MedAssist AI is designed for informational and educational reference purposes only. It is not a substitute for professional clinical judgment, diagnosis, or treatment. Always consult a qualified healthcare provider for medical concerns. In an emergency, contact local emergency services immediately.
 
-### POST /api/symptoms
+---
 
-Analyze user-reported symptoms (rate limited: 20 requests/minute per IP).
-
-**Request:**
-```json
-{
-  "text": "I have a severe headache and fever"
-}
-```
-
-**Response (Emergency):**
-```json
-{
-  "is_emergency": true,
-  "emergency_message": "These symptoms may indicate a life-threatening emergency. Call emergency services immediately (e.g. 115, 1122, 911). Do not wait.",
-  "conditions": [],
-  "disclaimer": "This tool is for information only and does not replace a doctor. Always consult a qualified healthcare professional for medical advice."
-}
-```
-
-**Response (Normal):**
-```json
-{
-  "is_emergency": false,
-  "emergency_message": null,
-  "conditions": [
-    {
-      "name": "Tension Headache",
-      "explanation": "A common type of headache caused by muscle tension...",
-      "severity": "mild",
-      "source": "WHO Headache Fact Sheet"
-    }
-  ],
-  "disclaimer": "This tool is for information only and does not replace a doctor. Always consult a qualified healthcare professional for medical advice."
-}
-```
-
-## Project Structure
-
-```
-├── .env.example                # Environment variables template
-├── .dockerignore               # Docker build exclusions
-├── docker-compose.yml          # Container orchestration
-├── nginx/
-│   └── nginx.conf              # Reverse proxy config (SPA routing + API proxy)
-│
-├── backend/
-│   ├── Dockerfile              # Multi-stage production build
-│   ├── config.py               # Configuration and constants
-│   ├── main.py                 # FastAPI application entry point
-│   ├── requirements.txt        # Python dependencies
-│   ├── routers/
-│   │   └── symptoms.py         # POST /api/symptoms endpoint
-│   ├── services/
-│   │   ├── emergency.py        # Emergency keyword detection (runs first)
-│   │   ├── ner.py             # scispacy entity extraction
-│   │   ├── retrieval.py       # ChromaDB vector search
-│   │   └── llm.py             # Claude API integration
-│   ├── ingestion/
-│   │   ├── ingest.py          # Knowledge base build script
-│   │   └── documents/         # Raw medical documents
-│   └── tests/
-│       ├── conftest.py           # Pytest fixtures
-│       ├── test_emergency.py     # Emergency detection tests
-│       ├── test_ner.py          # NER extraction tests
-│       └── test_retrieval.py    # Vector retrieval tests
-│
-├── frontend/
-│   ├── Dockerfile              # Multi-stage build (Node → Nginx)
-│   ├── .dockerignore           # Frontend build exclusions
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── tailwind.config.js
-│   └── src/
-│       ├── components/
-│       │   ├── Disclaimer.jsx       # Always-visible medical disclaimer banner
-│       │   ├── EmergencyBanner.jsx  # Red emergency alert with pulsing dot
-│       │   ├── SymptomInput.jsx     # Symptom input form with validation
-│       │   ├── ConditionCard.jsx    # Card displaying condition info
-│       │   ├── SeverityBadge.jsx    # Severity indicator (mild/moderate/urgent)
-│       │   └── LoadingState.jsx     # Analysis loading animation
-│       ├── pages/
-│       │   └── Home.jsx            # Main page orchestrating all components
-│       ├── api/
-│       │   └── symptoms.js        # API client for backend
-│       ├── App.jsx
-│       └── main.jsx
-```
-
-## Pipeline Order
-
-The symptom analysis pipeline executes in this strict order:
-1. **Emergency Detection** — Keyword check (returns immediately if emergency)
-2. **NER Extraction** — scispacy extracts symptoms, body parts, conditions
-3. **Query Building** — Combines entities with original text
-4. **Vector Retrieval** — ChromaDB returns relevant medical chunks
-5. **LLM Generation** — Claude generates grounded response
-
-## Emergency Keywords
-
-The system detects these keywords before processing:
-- chest pain, difficulty breathing, shortness of breath
-- loss of consciousness, unresponsive, not breathing
-- stroke, heart attack, severe bleeding
-- seizure, convulsion, anaphylaxis
-- choking, overdose, suicidal, kill myself
-
-## Security Features
-
-- **CORS** — Restricted to configured frontend origin only
-- **Rate Limiting** — 20 requests per minute per IP on `/api/symptoms`
-- **API Key Protection** — Never logged or exposed in responses
-- **Error Handling** — Internal errors never exposed to clients
-
-## Deployment
-
-### Docker Compose (Recommended)
-
-```bash
-# Build and start all services
-docker compose up --build
-
-# Run in detached mode
-docker compose up -d --build
-
-# View logs
-docker compose logs -f
-
-# Stop all services
-docker compose down
-```
-
-The app will be available at:
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8000
-- **Health Check**: http://localhost:8000/health
-
-### Cloud Deployment
-
-**Render.com (Backend)**
-1. Create a new Web Service
-2. Connect your GitHub repository
-3. Set root directory to `backend`
-4. Add environment variables from `.env.example`
-5. Set build command: (leave empty — Render auto-detects FastAPI)
-6. Set start command: `uvicorn backend.main:app --host 0.0.0.0 --port 8000`
-
-**Vercel (Frontend)**
-1. Install Vercel CLI: `npm i -g vercel`
-2. Add `VERCEL_BACKEND_URL` environment variable with your Render backend URL
-3. Deploy: `vercel --prod`
-4. Or connect GitHub repo for automatic deployments
-
-**Railway (Alternative Backend)**
-1. Create new project → Deploy from GitHub
-2. Set root directory to `backend`
-3. Add environment variables from `.env.example`
-4. Railway auto-detects Python/FastAPI
-
-### Environment Variables for Production
-
-```env
-# Backend (on Render/Railway)
-CHROMA_DB_PATH=./chroma_db
-CHROMA_COLLECTION_NAME=medical_symptoms
-FRONTEND_URL=https://your-frontend.vercel.app
-EMBEDDING_MODEL=all-MiniLM-L6-v2
-CLAUDE_API_KEY=sk-ant-...
-CLAUDE_MODEL=claude-sonnet-4-20250514
-
-# Frontend (on Vercel)
-VITE_BACKEND_URL=https://your-backend.onrender.com
-```
-
-### Running Tests
-
-Run the backend test suite with pytest:
-
-```bash
-python3 -m pytest backend/tests/ -v
-```
-
-Individual test suites:
-```bash
-python3 -m pytest backend/tests/test_emergency.py -v
-python3 -m pytest backend/tests/test_ner.py -v
-python3 -m pytest backend/tests/test_retrieval.py -v
-```
-
-Tests are fully mocked and do not require a running database or external services.
-
-## Disclaimer
-
-This tool is for information only and does not replace a doctor. Always consult a qualified healthcare professional for medical advice.
-
-## License
-
-MIT
+## 📄 License
+Licensed under the [MIT License](LICENSE).
