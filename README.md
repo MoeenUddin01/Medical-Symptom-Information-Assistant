@@ -23,9 +23,10 @@ This application provides medical symptom information by:
 
 ## Prerequisites
 
-- Python 3.10+
-- Node.js 18+
-- Docker (optional, for containerized deployment)
+- Python 3.11+
+- Node.js 20+
+- Docker 24+ and Docker Compose v2
+- Claude API key from Anthropic
 
 ## Installation
 
@@ -149,44 +150,53 @@ Analyze user-reported symptoms (rate limited: 20 requests/minute per IP).
 ## Project Structure
 
 ```
+├── .env.example                # Environment variables template
+├── .dockerignore               # Docker build exclusions
+├── docker-compose.yml          # Container orchestration
+├── nginx/
+│   └── nginx.conf              # Reverse proxy config (SPA routing + API proxy)
+│
 ├── backend/
-│   ├── config.py             # Configuration and constants
-│   ├── main.py               # FastAPI application entry point
-│   ├── requirements.txt      # Python dependencies
+│   ├── Dockerfile              # Multi-stage production build
+│   ├── config.py               # Configuration and constants
+│   ├── main.py                 # FastAPI application entry point
+│   ├── requirements.txt        # Python dependencies
 │   ├── routers/
-│   │   └── symptoms.py       # POST /api/symptoms endpoint
+│   │   └── symptoms.py         # POST /api/symptoms endpoint
 │   ├── services/
-│   │   ├── emergency.py      # Emergency keyword detection (runs first)
-│   │   ├── ner.py            # scispacy entity extraction
-│   │   ├── retrieval.py      # ChromaDB vector search
-│   │   └── llm.py            # Claude API integration
+│   │   ├── emergency.py        # Emergency keyword detection (runs first)
+│   │   ├── ner.py             # scispacy entity extraction
+│   │   ├── retrieval.py       # ChromaDB vector search
+│   │   └── llm.py             # Claude API integration
 │   ├── ingestion/
-│   │   ├── ingest.py         # Knowledge base build script
-│   │   └── documents/        # Raw medical documents
+│   │   ├── ingest.py          # Knowledge base build script
+│   │   └── documents/         # Raw medical documents
 │   └── tests/
 │       ├── conftest.py           # Pytest fixtures
 │       ├── test_emergency.py     # Emergency detection tests
-│       ├── test_ner.py           # NER extraction tests
-│       └── test_retrieval.py     # Vector retrieval tests
+│       ├── test_ner.py          # NER extraction tests
+│       └── test_retrieval.py    # Vector retrieval tests
+│
 ├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Disclaimer.jsx       # Always-visible medical disclaimer banner
-│   │   │   ├── EmergencyBanner.jsx   # Red emergency alert with pulsing dot
-│   │   │   ├── SymptomInput.jsx      # Symptom input form with validation
-│   │   │   ├── ConditionCard.jsx    # Card displaying condition info
-│   │   │   ├── SeverityBadge.jsx    # Severity indicator (mild/moderate/urgent)
-│   │   │   └── LoadingState.jsx     # Analysis loading animation
-│   │   ├── pages/
-│   │   │   └── Home.jsx             # Main page orchestrating all components
-│   │   ├── api/
-│   │   │   └── symptoms.js          # API client for backend
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   └── ...
-├── nginx/
-│   └── nginx.conf                   # Reverse proxy config
-└── docker-compose.yml               # Container orchestration
+│   ├── Dockerfile              # Multi-stage build (Node → Nginx)
+│   ├── .dockerignore           # Frontend build exclusions
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── tailwind.config.js
+│   └── src/
+│       ├── components/
+│       │   ├── Disclaimer.jsx       # Always-visible medical disclaimer banner
+│       │   ├── EmergencyBanner.jsx  # Red emergency alert with pulsing dot
+│       │   ├── SymptomInput.jsx     # Symptom input form with validation
+│       │   ├── ConditionCard.jsx    # Card displaying condition info
+│       │   ├── SeverityBadge.jsx    # Severity indicator (mild/moderate/urgent)
+│       │   └── LoadingState.jsx     # Analysis loading animation
+│       ├── pages/
+│       │   └── Home.jsx            # Main page orchestrating all components
+│       ├── api/
+│       │   └── symptoms.js        # API client for backend
+│       ├── App.jsx
+│       └── main.jsx
 ```
 
 ## Pipeline Order
@@ -214,7 +224,67 @@ The system detects these keywords before processing:
 - **API Key Protection** — Never logged or exposed in responses
 - **Error Handling** — Internal errors never exposed to clients
 
-## Testing
+## Deployment
+
+### Docker Compose (Recommended)
+
+```bash
+# Build and start all services
+docker compose up --build
+
+# Run in detached mode
+docker compose up -d --build
+
+# View logs
+docker compose logs -f
+
+# Stop all services
+docker compose down
+```
+
+The app will be available at:
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **Health Check**: http://localhost:8000/health
+
+### Cloud Deployment
+
+**Render.com (Backend)**
+1. Create a new Web Service
+2. Connect your GitHub repository
+3. Set root directory to `backend`
+4. Add environment variables from `.env.example`
+5. Set build command: (leave empty — Render auto-detects FastAPI)
+6. Set start command: `uvicorn backend.main:app --host 0.0.0.0 --port 8000`
+
+**Vercel (Frontend)**
+1. Install Vercel CLI: `npm i -g vercel`
+2. Add `VERCEL_BACKEND_URL` environment variable with your Render backend URL
+3. Deploy: `vercel --prod`
+4. Or connect GitHub repo for automatic deployments
+
+**Railway (Alternative Backend)**
+1. Create new project → Deploy from GitHub
+2. Set root directory to `backend`
+3. Add environment variables from `.env.example`
+4. Railway auto-detects Python/FastAPI
+
+### Environment Variables for Production
+
+```env
+# Backend (on Render/Railway)
+CHROMA_DB_PATH=./chroma_db
+CHROMA_COLLECTION_NAME=medical_symptoms
+FRONTEND_URL=https://your-frontend.vercel.app
+EMBEDDING_MODEL=all-MiniLM-L6-v2
+CLAUDE_API_KEY=sk-ant-...
+CLAUDE_MODEL=claude-sonnet-4-20250514
+
+# Frontend (on Vercel)
+VITE_BACKEND_URL=https://your-backend.onrender.com
+```
+
+### Running Tests
 
 Run the backend test suite with pytest:
 
