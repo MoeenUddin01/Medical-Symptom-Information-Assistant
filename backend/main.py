@@ -50,15 +50,10 @@ async def startup_event():
     if SUPABASE_URL and SUPABASE_KEY:
         logger.info("Supabase connected: %s", SUPABASE_URL)
 
-        from backend.services.knowledge import get_knowledge_count, seed_knowledge_base, MEDICAL_DOCUMENTS
+        from backend.services.knowledge import get_knowledge_count
 
         count = get_knowledge_count()
         logger.info("Knowledge base count: %d", count)
-
-        if count == 0:
-            logger.info("Seeding knowledge base...")
-            seeded = seed_knowledge_base(MEDICAL_DOCUMENTS)
-            logger.info("Seeded %d knowledge chunks", seeded)
     else:
         logger.warning("Supabase not configured - query logging disabled")
 

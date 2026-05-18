@@ -14,10 +14,11 @@ Usage:
 import json
 import re
 from typing import Dict, List
+import requests
 
 import google.generativeai as genai
 
-from backend.config import GOOGLE_API_KEY, GEMINI_MODEL
+from backend.config import GOOGLE_API_KEY, GEMINI_MODEL, GROQ_API_KEY, GROQ_MODEL
 from backend.services.retrieval import format_chunks_for_prompt
 
 
@@ -173,36 +174,76 @@ def call_llm(user_input: str, chunks: List[Dict[str, str | float]]) -> List[Dict
             }
         ]
 
-    try:
-        model = _get_model()
-    except Exception as e:
-        return [
-            {
-                "name": "Parse Error",
-                "explanation": f"Model initialization failed: {str(e)}",
-                "severity": "moderate",
-                "source": "system",
+    if GROQ_API_KEY:
+        try:
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "Content-Type": "application/json"
             }
-        ]
+            payload = {
+                "model": GROQ_MODEL,
+                "messages": [
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.2,
+                "max_tokens": 1500,
+                "response_format": {"type": "json_object"}
+            }
+            response = requests.post(url, json=payload, headers=headers, timeout=30)
+            response.raise_for_status()
+            result = response.json()
+            raw_text = result["choices"][0]["message"]["content"].strip()
+        except Exception as e:
+            return [
+                {
+                    "name": "Parse Error",
+                    "explanation": f"Groq API call failed: {str(e)}",
+                    "severity": "moderate",
+                    "source": "system",
+                }
+            ]
+    else:
+        try:
+            model = _get_model()
+        except Exception as e:
+            return [
+                {
+                    "name": "Parse Error",
+                    "explanation": f"Model initialization failed: {str(e)}",
+                    "severity": "moderate",
+                    "source": "system",
+                }
+            ]
 
-    try:
-        response = model.generate_content(prompt)
-        raw_text = response.text.strip()
-    except Exception as e:
-        return [
-            {
-                "name": "Parse Error",
-                "explanation": f"Gemini API call failed: {str(e)}",
-                "severity": "moderate",
-                "source": "system",
-            }
-        ]
+        try:
+            response = model.generate_content(prompt)
+            raw_text = response.text.strip()
+        except Exception as e:
+            return [
+                {
+                    "name": "Parse Error",
+                    "explanation": f"Gemini API call failed: {str(e)}",
+                    "severity": "moderate",
+                    "source": "system",
+                }
+            ]
 
     try:
         cleaned_text = _strip_markdown_fences(raw_text)
         parsed = json.loads(cleaned_text)
         conditions = parsed.get("conditions", [])
-        if conditions and isinstance(conditions, list):
+        if isinstance(conditions, list):
+            if len(conditions) == 0:
+                return [
+                    {
+                        "name": "No matching conditions",
+                        "explanation": "I could not find specific information about these symptoms in my reference documents. Please consult a healthcare professional for guidance.",
+                        "severity": "mild",
+                        "source": "System"
+                    }
+                ]
+            
             validated_conditions = []
             for cond in conditions:
                 if isinstance(cond, dict) and "name" in cond:

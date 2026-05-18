@@ -18,6 +18,9 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
+GROQ_API_KEY = os.getenv("GROQ_API_KEY") or os.getenv("groq")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
 CHUNK_MIN_WORDS = 350
 CHUNK_MAX_WORDS = 450
 CHUNK_OVERLAP_WORDS = 50
