@@ -1,0 +1,61 @@
+# docker-compose.yml - MedAssist Full Stack
+# Production deployment with backend, frontend, and persistent ChromaDB storage
+
+version: "3.9"
+
+services:
+  # -----------------------------------------------------------------------------
+  # Backend Service - FastAPI + ChromaDB + scispacy NER + Claude LLM
+  # -----------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: medassist-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    expose:
+      - "8000"
+    volumes:
+      - chroma_data:/app/chroma_db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - medassist-network
+
+  # -----------------------------------------------------------------------------
+  # Frontend Service - React + Vite + Nginx
+  # -----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_BACKEND_URL: http://localhost:8000
+    container_name: medassist-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - medassist-network
+
+# -----------------------------------------------------------------------------
+# Named Volumes - ChromaDB persistent storage
+# -----------------------------------------------------------------------------
+volumes:
+  chroma_data:
+
+# -----------------------------------------------------------------------------
+# Networks - Internal bridge for container communication
+# -----------------------------------------------------------------------------
+networks:
+  medassist-network:
+    driver: bridge
