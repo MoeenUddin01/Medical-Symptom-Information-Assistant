@@ -5,6 +5,7 @@ load_dotenv()
 
 CHROMA_DB_PATH = os.getenv("CHROMA_DB_PATH", "./chroma_db")
 CHROMA_COLLECTION_NAME = os.getenv("CHROMA_COLLECTION_NAME", "medical_symptoms")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 
